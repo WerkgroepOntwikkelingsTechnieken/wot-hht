@@ -6,13 +6,18 @@ import com.badlogic.gdx.InputProcessor;
 public class KeyInput implements InputProcessor {
 
     private String currentScan = "";
+    private final Main main;
+
+    public KeyInput(Main main) {
+        this.main = main;
+    }
 
     @Override
     public boolean keyDown(int keycode) {
         if (keycode != 66  && Input.Keys.toString(keycode).matches("[a-zA-Z0-9]")) {
             currentScan += Input.Keys.toString(keycode);
         } else if (!currentScan.isEmpty()) {
-            System.out.println(currentScan);
+            main.scan(currentScan);
             currentScan = "";
         }
         return false;

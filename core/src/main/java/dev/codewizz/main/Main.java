@@ -11,16 +11,25 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.VisUI.SkinScale;
 import com.kotcrab.vis.ui.util.dialog.Dialogs;
+import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisWindow;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 public class Main extends ApplicationAdapter {
     private Stage stage;
 
+    private String teamInput = "";
+
     @Override
     public void create () {
+        Database.connect();
+
         VisUI.setSkipGdxVersionCheck(true);
         VisUI.load(SkinScale.X2);
 
@@ -31,21 +40,7 @@ public class Main extends ApplicationAdapter {
         root.setFillParent(true);
         stage.addActor(root);
 
-        final VisTextButton textButton = new VisTextButton("click me!");
-        textButton.addListener(new ChangeListener() {
-            @Override
-            public void changed (ChangeEvent event, Actor actor) {
-                textButton.setText("clicked");
-                Dialogs.showOKDialog(stage, "message", "good job!");
-        }
-        });
 
-        VisWindow window = new VisWindow("example window");
-        window.add("this is a simple VisUI window").padTop(5f).row();
-        window.add(textButton).pad(10f);
-        window.pack();
-        window.centerWindow();
-        stage.addActor(window.fadeIn());
     }
 
     @Override
@@ -63,6 +58,11 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose () {
+        try {
+            Database.connection.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
         VisUI.dispose();
         stage.dispose();
     }
@@ -70,7 +70,54 @@ public class Main extends ApplicationAdapter {
     private void setupInput() {
         InputMultiplexer multiplexer = new InputMultiplexer();
         multiplexer.addProcessor(stage);
-        multiplexer.addProcessor(new KeyInput());
+        multiplexer.addProcessor(new KeyInput(this));
         Gdx.input.setInputProcessor(multiplexer);
+    }
+
+    public void scan(String input) {
+        System.out.println(input);
+
+        if (teamInput.isEmpty()) { teamInput = input; return; }
+
+        ResultSet team = Database.query("SELECT * FROM team WHERE id = '" + teamInput + "'");
+        ResultSet tool = Database.query("SELECT * FROM tool WHERE id = '" + input + "'");
+        ResultSet size = Database.query("SELECT COUNT(*) FROM has WHERE team_id = '" + teamInput + "'");
+        try {
+
+            if (team.next() && tool.next() && size.next()) {
+                VisWindow window = new VisWindow("Are you sure?");
+                window.add(new VisLabel("Do-Group already has " + size.getInt("COUNT(*)") + " tool(s)")).row();
+
+                VisTextButton continueButton = new VisTextButton("Continue");
+                continueButton.addListener(new ChangeListener() {
+                    @Override
+                    public void changed (ChangeEvent event, Actor actor) {
+                        window.fadeOut();
+                        Database.insert("INSERT INTO has (team_id, tool_id) VALUES (" + teamInput + "," + input + ");");
+                        teamInput = "";
+                    }
+                });
+
+                VisTextButton cancelButton = new VisTextButton("Cancel");
+                cancelButton.addListener(new ChangeListener() {
+                    @Override
+                    public void changed (ChangeEvent event, Actor actor) {
+                        window.fadeOut();
+                        teamInput = "";
+                    }
+                });
+
+                VisTable buttons = new VisTable();
+                buttons.add(continueButton).expand().left();
+                buttons.add(cancelButton).expand().right();
+                window.add(buttons).expand().fill();
+
+                window.pack();
+                window.centerWindow();
+                stage.addActor(window.fadeIn());
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
