@@ -82,7 +82,7 @@ public class Main extends ApplicationAdapter {
 
             if (ret.next() && ret.getInt(1) == 1)  {
                 Dialogs.showOKDialog(stage, "Returned Tool", "");
-                Database.insert("DELETE FROM has WHERE team_id = '" + teamInput + "' AND tool_id = '" + input + "'");
+                Database.execute("DELETE FROM has WHERE team_id = '" + teamInput + "' AND tool_id = '" + input + "'");
                 teamInput = "";
                 return;
             }
@@ -96,7 +96,7 @@ public class Main extends ApplicationAdapter {
                     @Override
                     public void changed (ChangeEvent event, Actor actor) {
                         window.fadeOut();
-                        Database.insert("INSERT INTO has (team_id, tool_id) VALUES (" + teamInput + "," + input + ");");
+                        Database.execute("INSERT INTO has (team_id, tool_id) VALUES (" + teamInput + "," + input + ");");
                         teamInput = "";
                     }
                 });

@@ -6,7 +6,7 @@ public class Database {
 
     public static Connection connection;
 
-    public static void insert(String query) {
+    public static void execute(String query) {
         try {
             Statement statement = connection.createStatement();
             statement.execute(query);
