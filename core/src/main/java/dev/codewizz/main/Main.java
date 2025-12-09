@@ -11,13 +11,8 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.VisUI.SkinScale;
 import com.kotcrab.vis.ui.util.dialog.Dialogs;
-import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisTable;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.VisWindow;
+import com.kotcrab.vis.ui.widget.*;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -32,7 +27,6 @@ public class Main extends ApplicationAdapter {
 
         VisUI.setSkipGdxVersionCheck(true);
         VisUI.load(SkinScale.X2);
-
         stage = new Stage(new ScreenViewport());
         setupInput();
 
@@ -81,8 +75,17 @@ public class Main extends ApplicationAdapter {
 
         ResultSet team = Database.query("SELECT * FROM team WHERE id = '" + teamInput + "'");
         ResultSet tool = Database.query("SELECT * FROM tool WHERE id = '" + input + "'");
+        ResultSet ret = Database.query("SELECT COUNT(*) FROM has WHERE team_id = '" + teamInput + "' AND tool_id = '" + input + "'");
         ResultSet size = Database.query("SELECT COUNT(*) FROM has WHERE team_id = '" + teamInput + "'");
+
         try {
+
+            if (ret.next() && ret.getInt(1) == 1)  {
+                Dialogs.showOKDialog(stage, "Returned Tool", "");
+                Database.insert("DELETE FROM has WHERE team_id = '" + teamInput + "' AND tool_id = '" + input + "'");
+                teamInput = "";
+                return;
+            }
 
             if (team.next() && tool.next() && size.next()) {
                 VisWindow window = new VisWindow("Are you sure?");
@@ -115,6 +118,8 @@ public class Main extends ApplicationAdapter {
                 window.pack();
                 window.centerWindow();
                 stage.addActor(window.fadeIn());
+            } else {
+                teamInput = "";
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
