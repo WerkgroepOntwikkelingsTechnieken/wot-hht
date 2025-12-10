@@ -19,7 +19,7 @@ import java.sql.SQLException;
 public class Main extends ApplicationAdapter {
     private Stage stage;
 
-    private String teamInput = "";
+    private String prevInput = "";
 
     @Override
     public void create () {
@@ -33,6 +33,74 @@ public class Main extends ApplicationAdapter {
         VisTable root = new VisTable();
         root.setFillParent(true);
         stage.addActor(root);
+
+        VisTextButton insertTool =  new VisTextButton("Insert Tool");
+        insertTool.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                prevInput = "";
+
+                VisWindow visWindow = new VisWindow("Insert Tool");
+
+                VisTextField name = new VisTextField();
+                VisTextField description = new VisTextField();
+                VisTextField code = new VisTextField();
+
+                visWindow.add(new VisLabel("Tool Name: "), name).left().row();
+                visWindow.add(new VisLabel("Description: "), description).left().row();
+                visWindow.add(new VisLabel("Barcode: "), code).left().row();
+
+                VisTextButton submit = new VisTextButton("Submit");
+                submit.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent event, Actor actor) {
+                        Database.execute("INSERT INTO tool (id, name, description) VALUES (" + code.getText() + ",'" + name.getText() + "','" + description.getText() + "')");
+                        visWindow.fadeOut();
+                    }
+                });
+                visWindow.add(submit).expandX().fillX().right().row();
+
+                visWindow.addCloseButton();
+                visWindow.pack();
+                visWindow.centerWindow();
+
+                stage.addActor(visWindow.fadeIn());
+            }
+        });
+        root.add(insertTool).center();
+
+        VisTextButton insertTeam =  new VisTextButton("Insert Team");
+        insertTeam.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                prevInput = "";
+
+                VisWindow visWindow = new VisWindow("Insert Team");
+
+                VisTextField name = new VisTextField();
+                VisTextField code = new VisTextField();
+
+                visWindow.add(new VisLabel("Team Name: "), name).left().row();
+                visWindow.add(new VisLabel("Barcode: "), code).left().row();
+
+                VisTextButton submit = new VisTextButton("Submit");
+                submit.addListener(new ChangeListener() {
+                    @Override
+                    public void changed(ChangeEvent event, Actor actor) {
+                        Database.execute("INSERT INTO team (id, name, active, warnings) VALUES (" + code.getText() + ",'" + name.getText() + "', TRUE, 0)");
+                        visWindow.fadeOut();
+                    }
+                });
+                visWindow.add(submit).expandX().fillX().right().row();
+
+                visWindow.addCloseButton();
+                visWindow.pack();
+                visWindow.centerWindow();
+
+                stage.addActor(visWindow.fadeIn());
+            }
+        });
+        root.add(insertTeam).center();
 
 
     }
@@ -71,19 +139,19 @@ public class Main extends ApplicationAdapter {
     public void scan(String input) {
         System.out.println(input);
 
-        if (teamInput.isEmpty()) { teamInput = input; return; }
+        if (prevInput.isEmpty()) { prevInput = input; return; }
 
-        ResultSet team = Database.query("SELECT * FROM team WHERE id = '" + teamInput + "'");
+        ResultSet team = Database.query("SELECT * FROM team WHERE id = '" + prevInput + "'");
         ResultSet tool = Database.query("SELECT * FROM tool WHERE id = '" + input + "'");
-        ResultSet ret = Database.query("SELECT COUNT(*) FROM has WHERE team_id = '" + teamInput + "' AND tool_id = '" + input + "'");
-        ResultSet size = Database.query("SELECT COUNT(*) FROM has WHERE team_id = '" + teamInput + "'");
+        ResultSet ret = Database.query("SELECT COUNT(*) FROM has WHERE team_id = '" + prevInput + "' AND tool_id = '" + input + "'");
+        ResultSet size = Database.query("SELECT COUNT(*) FROM has WHERE team_id = '" + prevInput + "'");
 
         try {
 
             if (ret.next() && ret.getInt(1) == 1)  {
                 Dialogs.showOKDialog(stage, "Returned Tool", "");
-                Database.execute("DELETE FROM has WHERE team_id = '" + teamInput + "' AND tool_id = '" + input + "'");
-                teamInput = "";
+                Database.execute("DELETE FROM has WHERE team_id = '" + prevInput + "' AND tool_id = '" + input + "'");
+                prevInput = "";
                 return;
             }
 
@@ -96,8 +164,8 @@ public class Main extends ApplicationAdapter {
                     @Override
                     public void changed (ChangeEvent event, Actor actor) {
                         window.fadeOut();
-                        Database.execute("INSERT INTO has (team_id, tool_id) VALUES (" + teamInput + "," + input + ");");
-                        teamInput = "";
+                        Database.execute("INSERT INTO has (team_id, tool_id) VALUES (" + prevInput + "," + input + ");");
+                        prevInput = "";
                     }
                 });
 
@@ -106,7 +174,7 @@ public class Main extends ApplicationAdapter {
                     @Override
                     public void changed (ChangeEvent event, Actor actor) {
                         window.fadeOut();
-                        teamInput = "";
+                        prevInput = "";
                     }
                 });
 
@@ -119,7 +187,7 @@ public class Main extends ApplicationAdapter {
                 window.centerWindow();
                 stage.addActor(window.fadeIn());
             } else {
-                teamInput = "";
+                prevInput = "";
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
